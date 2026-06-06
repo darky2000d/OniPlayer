@@ -3,7 +3,6 @@ Watching an offline course or series and forget which episode was next? this is 
 
 <img width="1098" height="641" alt="image" src="https://github.com/user-attachments/assets/52cb56e9-e088-4519-8aa4-e95b5af35f12" />
 
-<img width="761" height="636" alt="image" src="https://github.com/user-attachments/assets/6898969e-fd05-4cef-81ff-a496345f1ff2" />
 
 # OniPlayer
 
@@ -35,3 +34,5 @@ Perfect for offline courses or series with many episodes.
 
 ## Build from source
 Open in Visual Studio → Build. Or just use the provided Release .exe.
+
+<img width="761" height="636" alt="image" src="https://github.com/user-attachments/assets/6898969e-fd05-4cef-81ff-a496345f1ff2" />
