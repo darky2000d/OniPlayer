@@ -22,7 +22,7 @@ Perfect for offline courses or series with many episodes.
 1. Put `OniPlayer.exe` in any folder (e.g., `D:\MyTools`).  
 2. Run it once – it will create config files in that same folder.  
 3. Create a shortcut to the .exe and place it anywhere you like (desktop, start menu).  
-4. Whenever you open the app, your locations and play mode are remembered.
+4. Whenever you open the app, your locations and play mode are remembered
 
 > The config files must stay next to the .exe. So don't move the .exe alone – keep the whole folder or use a shortcut.
 
