@@ -85,7 +85,7 @@ That’s the whole idea. No setup, no config, no remembering.
 ---
 
 ## Build from source
-Open in Visual Studio → Build. Or download the latest Release .exe from the [Releases page](https://github.com/SobieArts/OniPlayer).
+Open in Visual Studio → Build. Or download the latest Release .exe from the [Releases page](https://github.com/SobieArts/OniPlayer/releases).
 
 ---
 
