@@ -1,14 +1,14 @@
 # OniPlayer  
-### *Goldfish memory? 200 episodes? No problem.*
-A C# console app that remembers your last watched video In Any Folders.  
-One key, no thinking.
+### Goldfish memory? 200 episodes? No problem.
+<small>A C# console app that remembers your last watched video In Any Folders.  
+One key, no thinking.</small>
 ---
 
 ## What it actually does
 
-You have folders. They’re full of videos.  
+You have Course or Anime folders With many Episodes.  
 You don’t remember which one you watched last.  
-**OniPlayer** shows the name of that video right in the menu.
+**OniPlayer** Uses Windows Accses time And Playes The last Video/Anime Episode you Watched or Next one.
 
 - Press **Enter** → it plays the last video you watched.  
 - Press **→** (right arrow) → it switches to “Play Next”. Then Enter plays the next video instead.
@@ -42,7 +42,8 @@ That’s the whole idea. No setup, no config, no remembering.
 - **Multiple folders** – add as many as you like (press `1`), give them nicknames.
 - **History peek** – see the last 20 videos in a folder with exact access times (press `3`). Perfect for catching where you left off.
 
-<img width="1104" height="639" alt="image" src="https://github.com/user-attachments/assets/9f0f7775-6e9e-42a7-8191-d56b954f94cc" />
+<img width="1103" height="639" alt="image" src="https://github.com/user-attachments/assets/296f7f20-9138-452d-9be7-734d6cc36b03" />
+
 
 
 - **Portable** – all settings live in two tiny files (`locations.cfg` & `oniplayer.cfg`) next to the .exe. Put it on a USB stick, sync it with Dropbox, whatever. Your place follows you.
@@ -88,4 +89,4 @@ Open in Visual Studio → Build. Or download the latest Release .exe from the [R
 
 ---
 
-*“I binged a 120‑episode course and never once had to wonder where I left off. OniPlayer just… knows.”*
+*“I binged a 120‑episode course with a fish memory and never once had to wonder where I left off. OniPlayer just… knows.”*
