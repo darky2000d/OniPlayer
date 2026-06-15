@@ -1,4 +1,5 @@
-﻿using System;
+//-------------Updated to V1.3 with new features--------------
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,8 +15,8 @@ namespace OniPlayer
 
     enum PlayMode
     {
-        Current,  // play last accessed video
-        Next      // play next video alphabetically after last accessed
+        Current,
+        Next
     }
 
     class Program
@@ -26,63 +27,130 @@ namespace OniPlayer
         private static PlayMode currentMode = PlayMode.Current;
         private static readonly string[] videoExtensions = { ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".m4v", ".mpg", ".mpeg", ".3gp", ".webm" };
 
-        // Wave colors
-        private static int colorPhase = 0;
-        private static readonly ConsoleColor[] waveColors = { ConsoleColor.Green, ConsoleColor.Yellow, ConsoleColor.Magenta, ConsoleColor.Red, ConsoleColor.Blue, ConsoleColor.Cyan };
+        private static int drawCallCounter = 0;
+        private static int titleColorIndex = 0;
+        private static readonly ConsoleColor[] titleColors = { ConsoleColor.Red, ConsoleColor.Blue, ConsoleColor.Green };
+
+        private static readonly string[] menuItems =
+        {
+            "1. Add New Location",
+            "2. Remove Location",
+            "3. Details Location",
+            "4. Reset All",
+            "5. Play Mode"
+        };
+
+        private static int selectedIndex = 0;
+        private static bool focusOnAction = false;
 
         static void Main(string[] args)
         {
             Console.Title = "Oni Player - Smart Video Resume";
             LoadLocations();
             LoadSettings();
+            ClampSelectedIndex();
 
-            int selectedIndex = 0;
             bool running = true;
-
             while (running)
             {
-                DrawMainMenu(selectedIndex);
+                DrawMainMenu();
                 var key = Console.ReadKey(true);
+                int totalItems = locations.Count + menuItems.Length;
 
-                if (key.Key == ConsoleKey.UpArrow && locations.Count > 0)
-                    selectedIndex = (selectedIndex - 1 + locations.Count) % locations.Count;
-                else if (key.Key == ConsoleKey.DownArrow && locations.Count > 0)
-                    selectedIndex = (selectedIndex + 1) % locations.Count;
-                else if (key.Key == ConsoleKey.Enter && locations.Count > 0)
+                if (key.Key == ConsoleKey.UpArrow && totalItems > 0)
                 {
-                    PlayVideoBasedOnMode(locations[selectedIndex]);
-                    Console.WriteLine("\nPress any key to continue...");
-                    Console.ReadKey(true);
+                    selectedIndex = (selectedIndex - 1 + totalItems) % totalItems;
+                    focusOnAction = false;
                 }
-                else if (key.KeyChar == '1')
+                else if (key.Key == ConsoleKey.DownArrow && totalItems > 0)
                 {
-                    AddLocation();
-                    LoadLocations();
-                    selectedIndex = 0;
+                    selectedIndex = (selectedIndex + 1) % totalItems;
+                    focusOnAction = false;
                 }
-                else if (key.KeyChar == '2')
+                else if (key.Key == ConsoleKey.LeftArrow && totalItems > 0)
                 {
-                    RemoveLocation();
-                    LoadLocations();
-                    if (selectedIndex >= locations.Count) selectedIndex = Math.Max(0, locations.Count - 1);
+                    if (selectedIndex < locations.Count && focusOnAction)
+                        focusOnAction = false;
                 }
-                else if (key.KeyChar == '3')
+                else if (key.Key == ConsoleKey.RightArrow && totalItems > 0)
                 {
-                    ShowDetailsWrapper();
+                    if (selectedIndex < locations.Count && !focusOnAction)
+                        focusOnAction = true;
                 }
-                else if (key.KeyChar == '4')
+                else if (key.Key == ConsoleKey.Enter && totalItems > 0)
                 {
-                    ResetAll();
-                    LoadLocations();
-                    selectedIndex = 0;
+                    if (selectedIndex < locations.Count)
+                    {
+                        if (focusOnAction)
+                        {
+                            PlayMode opposite = currentMode == PlayMode.Next ? PlayMode.Current : PlayMode.Next;
+                            if (opposite == PlayMode.Current)
+                                PlayLastVideo(locations[selectedIndex]);
+                            else
+                            {
+                                string nextPath = GetNextVideoPath(locations[selectedIndex].Path);
+                                if (nextPath == null)
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    Console.WriteLine("\nNext video not found (maybe last video is the last one).");
+                                    Console.ResetColor();
+                                }
+                                else
+                                {
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    Console.WriteLine($"\nPlaying next video after last accessed: {Path.GetFileName(nextPath)}");
+                                    Console.ResetColor();
+                                    try { Process.Start(nextPath); }
+                                    catch (Exception ex)
+                                    {
+                                        Console.ForegroundColor = ConsoleColor.Red;
+                                        Console.WriteLine($"Error opening player: {ex.Message}");
+                                        Console.ResetColor();
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            PlayVideoBasedOnMode(locations[selectedIndex]);
+                        }
+                        focusOnAction = false;
+                        Console.WriteLine("\nPress any key to continue...");
+                        Console.ReadKey(true);
+                    }
+                    else
+                    {
+                        int menuIdx = selectedIndex - locations.Count;
+                        ExecuteMenuAction(menuIdx);
+                    }
                 }
-                else if (key.KeyChar == '5')
-                {
-                    TogglePlayMode();
-                }
-                else if (key.Key == ConsoleKey.Escape)
-                    running = false;
+                else if (key.KeyChar == '1') ExecuteMenuAction(0);
+                else if (key.KeyChar == '2') ExecuteMenuAction(1);
+                else if (key.KeyChar == '3') ExecuteMenuAction(2);
+                else if (key.KeyChar == '4') ExecuteMenuAction(3);
+                else if (key.KeyChar == '5') ExecuteMenuAction(4);
+                else if (key.Key == ConsoleKey.Escape) running = false;
             }
+        }
+
+        private static void ExecuteMenuAction(int idx)
+        {
+            switch (idx)
+            {
+                case 0: AddLocation(); LoadLocations(); ClampSelectedIndex(); break;
+                case 1: RemoveLocation(); LoadLocations(); ClampSelectedIndex(); break;
+                case 2: ShowDetailsWrapper(); break;
+                case 3: ResetAll(); LoadLocations(); ClampSelectedIndex(); break;
+                case 4: TogglePlayMode(); break;
+            }
+        }
+
+        private static void ClampSelectedIndex()
+        {
+            int total = locations.Count + menuItems.Length;
+            if (total == 0) total = 1;
+            if (selectedIndex >= total) selectedIndex = total - 1;
+            if (selectedIndex < 0) selectedIndex = 0;
         }
 
         // ==================== Settings ====================
@@ -90,8 +158,7 @@ namespace OniPlayer
         {
             if (!File.Exists(settingsFile)) return;
             string content = File.ReadAllText(settingsFile).Trim();
-            if (content == "Next") currentMode = PlayMode.Next;
-            else currentMode = PlayMode.Current;
+            currentMode = (content == "Next") ? PlayMode.Next : PlayMode.Current;
         }
 
         private static void SaveSettings()
@@ -101,37 +168,106 @@ namespace OniPlayer
 
         private static void TogglePlayMode()
         {
-            Console.Clear();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("--- Play Mode Settings ---\n");
-            Console.ResetColor();
-            Console.WriteLine($"Current mode: {(currentMode == PlayMode.Current ? "Current Video" : "Next Video")}");
-            Console.WriteLine("\n1. Current Video (always play last accessed)");
-            Console.WriteLine("2. Next Video (play next after last accessed)");
-            Console.WriteLine("Esc. Cancel");
-            Console.Write("\nChoose (1/2/Esc): ");
+            int selected = 0; // 0 = Current, 1 = Next
+            bool done = false;
 
-            var key = Console.ReadKey(true);
-            if (key.KeyChar == '1')
+            while (!done)
             {
-                currentMode = PlayMode.Current;
-                SaveSettings();
-                Console.WriteLine("\nMode set to: Current Video");
+                Console.Clear();
+
+                // Header
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("--- Play Mode Settings ---\n");
+                Console.ResetColor();
+
+                // Option 1
+                if (selected == 0)
+                {
+                    Console.BackgroundColor = ConsoleColor.DarkCyan;
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+              
+                Console.Write("  1. ");
+                Console.WriteLine("Current - (play current vid)");
+                Console.ResetColor();
+
+                // Option 2
+                if (selected == 1)
+                {
+                    Console.BackgroundColor = ConsoleColor.DarkCyan;
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+                Console.Write("  2. ");
+                Console.WriteLine("Next - (play next vid)");
+                Console.ResetColor();
+
+                // Cancel hint
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine("  Esc. Cancel");
+                Console.ResetColor();
+
+                // Prompt
+                Console.Write("\nChoose (↑/↓ to select, Enter to confirm, Esc to cancel): ");
+                var key = Console.ReadKey(true);
+
+                if (key.Key == ConsoleKey.UpArrow || key.Key == ConsoleKey.DownArrow)
+                {
+                    selected = (selected + 1) % 2; // only two options, toggle
+                }
+                else if (key.Key == ConsoleKey.Enter)
+                {
+                    done = true;
+                    if (selected == 0)
+                    {
+                        currentMode = PlayMode.Current;
+                        SaveSettings();
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("\n Mode set to: Current Video");
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        currentMode = PlayMode.Next;
+                        SaveSettings();
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("\n Mode set to: Next Video");
+                        Console.ResetColor();
+                    }
+                }
+                else if (key.Key == ConsoleKey.Escape)
+                {
+                    done = true;
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine("\nNo changes made.");
+                    Console.ResetColor();
+                }
+                else if (key.KeyChar == '1')
+                {
+                    done = true;
+                    currentMode = PlayMode.Current;
+                    SaveSettings();
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.WriteLine("\n✔ Mode set to: Current Video");
+                    Console.ResetColor();
+                }
+                else if (key.KeyChar == '2')
+                {
+                    done = true;
+                    currentMode = PlayMode.Next;
+                    SaveSettings();
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("\n Mode set to: Next Video");
+                    Console.ResetColor();
+                }
             }
-            else if (key.KeyChar == '2')
-            {
-                currentMode = PlayMode.Next;
-                SaveSettings();
-                Console.WriteLine("\nMode set to: Next Video");
-            }
-            else
-            {
-                Console.WriteLine("\nNo changes made.");
-            }
-            Console.WriteLine("\nPress any key...");
+
+            Console.WriteLine("\nPress any key to return...");
             Console.ReadKey(true);
         }
-
         // ==================== Location Management ====================
         private static void LoadLocations()
         {
@@ -148,8 +284,7 @@ namespace OniPlayer
 
         private static void SaveLocations()
         {
-            var lines = locations.Select(l => $"{l.Nickname}|{l.Path}").ToArray();
-            File.WriteAllLines(configFile, lines);
+            File.WriteAllLines(configFile, locations.Select(l => $"{l.Nickname}|{l.Path}"));
         }
 
         // ==================== Video Logic ====================
@@ -158,19 +293,18 @@ namespace OniPlayer
             videoPath = null;
             if (!Directory.Exists(folderPath)) return "Folder not found";
 
-            var videoFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
+            var files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
                 .Where(f => videoExtensions.Contains(Path.GetExtension(f).ToLower()))
-                .Select(f => new FileInfo(f))
-                .ToList();
+                .Select(f => new FileInfo(f)).ToList();
 
-            if (videoFiles.Count == 0) return "No videos found";
+            if (files.Count == 0) return "No videos found";
 
-            var last = videoFiles.OrderByDescending(f => f.LastAccessTime).FirstOrDefault();
+            var last = files.OrderByDescending(f => f.LastAccessTime).FirstOrDefault();
             if (last == null || last.LastAccessTime.Year < 2000) return "Never played";
 
             videoPath = last.FullName;
             string name = last.Name;
-            const int maxLen = 35;
+            const int maxLen = 45;
             if (name.Length > maxLen) name = name.Substring(0, maxLen - 3) + "...";
             return name;
         }
@@ -183,9 +317,8 @@ namespace OniPlayer
                 return;
             }
 
-            // Play Next Video mode
-            string targetVideoPath = GetNextVideoPath(loc.Path);
-            if (targetVideoPath == null)
+            string nextPath = GetNextVideoPath(loc.Path);
+            if (nextPath == null)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("\nNext video not found (maybe last video is the last one).");
@@ -194,9 +327,9 @@ namespace OniPlayer
             }
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"\nPlaying next video after last accessed: {Path.GetFileName(targetVideoPath)}");
+            Console.WriteLine($"\nPlaying next video after last accessed: {Path.GetFileName(nextPath)}");
             Console.ResetColor();
-            try { Process.Start(targetVideoPath); }
+            try { Process.Start(nextPath); }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -233,29 +366,23 @@ namespace OniPlayer
         {
             if (!Directory.Exists(folderPath)) return null;
 
-            // Get all video files sorted naturally (alphabetical, numeric aware)
             var allVideos = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
                 .Where(f => videoExtensions.Contains(Path.GetExtension(f).ToLower()))
                 .Select(f => new FileInfo(f))
-                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
             if (allVideos.Count == 0) return null;
 
-            // Find last accessed video
             var lastAccessed = allVideos.OrderByDescending(f => f.LastAccessTime).FirstOrDefault();
             if (lastAccessed == null) return null;
 
-            int index = allVideos.FindIndex(f => f.FullName == lastAccessed.FullName);
-            if (index == -1) return null;
+            int idx = allVideos.FindIndex(f => f.FullName == lastAccessed.FullName);
+            if (idx == -1 || idx + 1 >= allVideos.Count) return null;
 
-            // If last video is the last one, return null (no next)
-            if (index + 1 >= allVideos.Count) return null;
-
-            return allVideos[index + 1].FullName;
+            return allVideos[idx + 1].FullName;
         }
 
-        // ==================== UI Helpers (unchanged except added mode indicator) ====================
+        // ==================== UI Helpers ====================
         private static void ShowDetailsWrapper()
         {
             if (locations.Count == 0)
@@ -488,20 +615,23 @@ namespace OniPlayer
                     result = selected;
                     done = true;
                 }
-                else if (key.Key == ConsoleKey.Escape) done = true;
+                else if (key.Key == ConsoleKey.Escape)
+                {
+                    done = true;  // result remains -1
+                }
             }
             return result;
         }
 
-        private static void DrawMainMenu(int selectedIndex)
+        // ==================== MAIN MENU DRAWING ====================
+        private static void DrawMainMenu()
         {
             Console.Clear();
+            drawCallCounter++;
+            if (drawCallCounter % 7 == 0)
+                titleColorIndex = (titleColorIndex + 1) % titleColors.Length;
 
-            colorPhase = (colorPhase + 1) % (waveColors.Length * 3);
-            int colorIndex = (colorPhase / 3) % waveColors.Length;
-            ConsoleColor currentColor = waveColors[colorIndex];
-
-            Console.ForegroundColor = currentColor;
+            Console.ForegroundColor = titleColors[titleColorIndex];
             string art = @"
    ___        _   ____  _                       
   / _ \ _ __ (_) |  _ \| | __ _ _   _  ___ _ __ 
@@ -514,8 +644,7 @@ namespace OniPlayer
             Console.WriteLine(art);
             Console.ResetColor();
 
-            // Show current play mode
-            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine($"  [Play Mode: {(currentMode == PlayMode.Current ? "Current Video" : "Next Video")}]");
             Console.ResetColor();
 
@@ -533,49 +662,100 @@ namespace OniPlayer
                     var loc = locations[i];
                     string lastVideo = GetLastVideoInfo(loc.Path, out _);
                     string display = $"{loc.Nickname} || {lastVideo}";
-                    int maxWidth = Console.WindowWidth - 5;
-                    if (display.Length > maxWidth) display = display.Substring(0, maxWidth - 3) + "...";
 
-                    if (i == selectedIndex)
+                    if (i == selectedIndex && selectedIndex < locations.Count)
                     {
-                        Console.BackgroundColor = ConsoleColor.DarkCyan;
-                        Console.ForegroundColor = ConsoleColor.White;
-                        Console.Write("> ");
-                    }
-                    else Console.Write("  ");
+                        string actionSuffix = " || Play " + (currentMode == PlayMode.Next ? "Current" : "Next");
+                        int mainMax = Console.WindowWidth - 2 - actionSuffix.Length;
+                        string mainDisplay = display;
+                        if (mainDisplay.Length > mainMax)
+                            mainDisplay = mainDisplay.Substring(0, mainMax - 3) + "...";
 
-                    int sep = display.IndexOf("||");
-                    if (sep >= 0)
-                    {
-                        Console.Write(display.Substring(0, sep + 2));
-                        if (i == selectedIndex) Console.Write(display.Substring(sep + 2));
+                        int sepIdx = mainDisplay.IndexOf("||");
+                        string locPart = (sepIdx >= 0) ? mainDisplay.Substring(0, sepIdx + 2) : mainDisplay;
+                        string vidPart = (sepIdx >= 0) ? mainDisplay.Substring(sepIdx + 2) : "";
+
+                        if (!focusOnAction)
+                        {
+                            Console.BackgroundColor = ConsoleColor.DarkCyan;
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write("> ");
+                            Console.Write(locPart);
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write(vidPart);
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write(actionSuffix);
+                            Console.ResetColor();
+                            Console.WriteLine();
+                        }
                         else
                         {
+                            Console.BackgroundColor = ConsoleColor.DarkCyan;
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write("> ");
+                            Console.Write(locPart);
+                            Console.ForegroundColor = ConsoleColor.White;     
+                            Console.Write(vidPart);
+
+                            
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write(" || ");
+
+                            
+                            Console.BackgroundColor = ConsoleColor.DarkBlue;    
+                            Console.Write("Play " + (currentMode == PlayMode.Next ? "Current" : "Next"));
+
+                            Console.ResetColor();
+                            Console.WriteLine();
+                        }
+                    }
+                    else
+                    {
+                        int maxWidth = Console.WindowWidth - 5;
+                        string lineDisplay = display;
+                        if (lineDisplay.Length > maxWidth)
+                            lineDisplay = lineDisplay.Substring(0, maxWidth - 3) + "...";
+                        Console.Write("  ");
+                        int sep = lineDisplay.IndexOf("||");
+                        if (sep >= 0)
+                        {
+                            Console.Write(lineDisplay.Substring(0, sep + 2));
                             Console.ForegroundColor = ConsoleColor.Blue;
-                            Console.Write(display.Substring(sep + 2));
+                            Console.Write(lineDisplay.Substring(sep + 2));
                             Console.ResetColor();
                         }
+                        else Console.Write(lineDisplay);
                         Console.WriteLine();
                     }
-                    else Console.WriteLine(display);
-                    Console.ResetColor();
                 }
             }
 
             Console.WriteLine();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("1. Add New Location");
-            Console.WriteLine("2. Remove Location");
-            Console.WriteLine("3. Details Location");
-            Console.WriteLine("4. Reset All");
-            Console.WriteLine("5. Play Mode");
+            for (int i = 0; i < menuItems.Length; i++)
+            {
+                int unifiedIdx = locations.Count + i;
+                if (unifiedIdx == selectedIndex)
+                {
+                    Console.BackgroundColor = ConsoleColor.DarkCyan;
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.BackgroundColor = ConsoleColor.Black;
+                }
+                Console.WriteLine(menuItems[i]);
+                Console.ResetColor();
+            }
+
+            Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine("Esc. Back/Exit");
             Console.ResetColor();
 
             if (locations.Count > 0)
-                Console.WriteLine("\n↑/↓: Select location   Enter: Play   Number: Menu action");
+                Console.WriteLine("\n↑/↓: Select   ←/→: Toggle Play action   Enter: Execute   Number keys: Direct");
             else
-                Console.WriteLine("\nUse number keys to manage locations.");
+                Console.WriteLine("\n↑/↓: Select   Enter: Execute   Number keys: Direct");
         }
     }
 }
