@@ -644,7 +644,7 @@ namespace OniPlayer
             Console.WriteLine(art);
             Console.ResetColor();
 
-            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"  [Play Mode: {(currentMode == PlayMode.Current ? "Current Video" : "Next Video")}]");
             Console.ResetColor();
 
@@ -702,7 +702,7 @@ namespace OniPlayer
                             Console.Write(" || ");
 
                             
-                            Console.BackgroundColor = ConsoleColor.DarkBlue;    
+                            Console.BackgroundColor = ConsoleColor.DarkGreen;    
                             Console.Write("Play " + (currentMode == PlayMode.Next ? "Current" : "Next"));
 
                             Console.ResetColor();
