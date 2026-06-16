@@ -1,5 +1,5 @@
-# OniPlayer  
-### Goldfish memory? 200 episodes? No problem.
+## OniPlayer  
+*200 episodes? Goldfish memory? No problem.*  
 <small>A C# console app that remembers your last watched video In Any Folders.  
 One key, no thinking.</small>
 ---
