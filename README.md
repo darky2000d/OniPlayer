@@ -1,5 +1,5 @@
 # OniPlayer
-## Fish memory? 200 episodes? No problem.
+## Fish memory? 200 episodes?
 #### A C# console app that remembers your last watched video In Any Folders and plays.<br>One key, no thinking.
 
 ---
